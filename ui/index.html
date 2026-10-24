@@ -557,8 +557,7 @@
       els.tokenInput.value = state.token;
 
       const targetSaved = localStorage.getItem(STORAGE_KEYS.target) || '';
-      const targetValue = targetSaved || ''; 
-      els.targetInput.value = targetValue;
+      els.targetInput.value = targetSaved || '';
       const portSaved = localStorage.getItem(STORAGE_KEYS.port);
       els.portInput.value = portSaved || '80';
       const procsSaved = localStorage.getItem(STORAGE_KEYS.procs);
@@ -595,7 +594,7 @@
     async function fetchJson(url, { timeout = 15000, isFleet = false } = {}) {
       const targetUrl = appendQuery(url, state.token);
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeout); 
+      const timer = setTimeout(() => controller.abort(), timeout);
       try {
         const res = await fetch(targetUrl, {
           method: 'GET',
@@ -638,7 +637,7 @@
 
     async function fetchNodeStatus(node) {
       try {
-        const detail = await fetchJson(`${node.url}/`, { timeout: 15000 });
+        const detail = await fetchJson(`${node.url}/status`, { timeout: 15000 });
         const online = true;
         const rawRunning = detail && typeof detail.running === 'boolean' ? detail.running : false;
         return {

