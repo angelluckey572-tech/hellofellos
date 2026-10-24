@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fleet Dashboard</title>
+  <style>
+    :root {
+      --bg: #0b0d10;
+      --panel: #11151a;
+      --panel-2: #171d22;
+      --border: #1c2128;
+      --text: #d7dce3;
+      --dim: #6b7480;
+      --accent: #ff3b30;
+      --green: #2ecc71;
+      --amber: #f1c40f;
+      --red: #ff5a52;
+      --shadow: rgba(0, 0, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    body {
+      padding: 18px;
+      letter-spacing: 0.04em;
+    }
+
+    .app {
+      width: min(1200px, 100%);
+      margin: 0 auto;
+      display: grid;
+      gap: 18px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 10px 24px var(--shadow);
+      overflow: hidden;
+    }
+
+    .topbar {
+      padding: 16px 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .bar-row {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: minmax(260px, 1.7fr) minmax(140px, .7fr) auto;
+      align-items: end;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    label {
+      display: block;
+      font-size: 11px;
+      color: var(--dim);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      padding: 10px 12px;
+      font: inherit;
+      border-radius: 8px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--amber);
+      box-shadow: 0 0 0 1px rgba(241, 196, 15, 0.3);
+    }
+
+    .status-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      min-height: 46px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: var(--amber);
+      display: inline-block;
+      box-shadow: 0 0 12px rgba(241, 196, 15, 0.35);
+    }
+
+    .dot.green { background: var(--green); box-shadow: 0 0 12px rgba(46, 204, 113, 0.4); }
+    .dot.red { background: var(--accent); box-shadow: 0 0 12px rgba(255, 59, 48, 0.4); }
+    .dot.amber { background: var(--amber); box-shadow: 0 0 12px rgba(241, 196, 15, 0.4); }
+
+    .btns {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel-2);
+      color: var(--text);
+      padding: 11px 14px;
+      font: inherit;
+      cursor: pointer;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      transition: transform 0.12s ease, opacity 0.12s ease, border-color 0.12s ease;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: rgba(255,255,255,0.18);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: wait;
+    }
+
+    .primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: rgba(255,100,92,0.9);
+      font-weight: 700;
+      min-width: 160px;
+    }
+
+    .secondary {
+      background: var(--panel-2);
+      color: var(--text);
+    }
+
+    .warn {
+      background: var(--amber);
+      color: #121212;
+      border-color: rgba(241, 196, 15, 0.7);
+      font-weight: 700;
+    }
+
+    .target-grid {
+      display: grid;
+      grid-template-columns: minmax(260px, 2fr) repeat(3, minmax(100px, 1fr)) auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .checkbox {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 10px;
+      min-height: 44px;
+    }
+
+    .checkbox input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--green);
+    }
+
+    .content {
+      display: grid;
+      gap: 18px;
+      grid-template-columns: minmax(0, 1.7fr) minmax(280px, .8fr);
+    }
+
+    .table-wrap {
+      overflow: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    th {
+      color: var(--dim);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-size: 10px;
+      background: rgba(255,255,255,0.01);
+    }
+
+    tbody tr:hover {
+      background: rgba(255,255,255,0.02);
+    }
+
+    .status-line {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      display: inline-block;
+      min-width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--amber);
+    }
+
+    .badge.green { background: var(--green); }
+    .badge.red { background: var(--accent); }
+    .badge.amber { background: var(--amber); }
+    .badge.dim { background: var(--dim); }
+
+    .status-online { color: var(--green); }
+    .status-offline { color: var(--accent); }
+    .status-stopped { color: var(--amber); }
+
+    .log-panel {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      min-height: 420px;
+    }
+
+    .log-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .log-head h3 {
+      margin: 0;
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+
+    .log-body {
+      padding: 12px 12px 0;
+      overflow: auto;
+      max-height: 380px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .log-item {
+      border-radius: 6px;
+      padding: 6px 8px;
+      border: 1px solid rgba(255,255,255,0.03);
+      background: rgba(255,255,255,0.015);
+      color: var(--text);
+      line-height: 1.5;
+      word-break: break-word;
+    }
+
+    .log-item.success { border-color: rgba(46, 204, 113, 0.2); color: #cfeee0; }
+    .log-item.error { border-color: rgba(255, 59, 48, 0.2); color: #ffd4d1; }
+    .log-item.warn { border-color: rgba(241, 196, 15, 0.2); color: #f7e8a5; }
+    .log-item.dim { color: var(--dim); }
+
+    .log-foot {
+      border-top: 1px solid var(--border);
+      padding: 12px 16px;
+    }
+
+    .subtle {
+      color: var(--dim);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .status-text {
+      color: var(--dim);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 700px) {
+      body { padding: 12px; }
+      .bar-row, .target-grid, .content {
+        grid-template-columns: 1fr;
+      }
+      .status-wrap { justify-content: flex-start; }
+      .log-panel { min-height: 300px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="panel topbar">
+      <div class="bar-row">
+        <div class="field">
+          <label for="registryInput">Registry URL</label>
+          <input id="registryInput" type="text" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label for="tokenInput">Token</label>
+          <input id="tokenInput" type="password" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="status-wrap">
+          <span id="statusDot" class="dot amber" aria-label="connection status"></span>
+          <button id="wakeButton" class="warn" type="button" hidden>WAKE</button>
+        </div>
+      </div>
+
+      <div class="target-grid">
+        <div class="field">
+          <label for="targetInput">Target</label>
+          <input id="targetInput" type="text" autocomplete="off" spellcheck="false" placeholder="example.com:8080" />
+        </div>
+        <div class="field">
+          <label for="portInput">Port</label>
+          <input id="portInput" type="number" min="1" max="65535" value="80" />
+        </div>
+        <div class="field">
+          <label for="procsInput">Procs</label>
+          <input id="procsInput" type="number" min="1" max="64" value="2" />
+        </div>
+        <div class="field">
+          <label for="threadsInput">Threads</label>
+          <input id="threadsInput" type="number" min="1" max="512" value="32" />
+        </div>
+        <div class="checkbox">
+          <input id="mcInput" type="checkbox" />
+          <label for="mcInput" style="display:inline; letter-spacing:0.06em; font-size:12px; margin:0; color:var(--text);">mc</label>
+        </div>
+      </div>
+
+      <div class="btns">
+        <button id="fireButton" class="primary" type="button">FIRE</button>
+        <button id="stopButton" class="secondary" type="button">STOP</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="panel table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Node</th>
+              <th>Status</th>
+              <th>Running</th>
+              <th>Target</th>
+              <th>Uptime</th>
+              <th>Procs</th>
+            </tr>
+          </thead>
+          <tbody id="nodeTableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="panel log-panel">
+        <div class="log-head">
+          <h3>Event Log</h3>
+          <span id="statusText" class="status-text">READY</span>
+        </div>
+        <div id="logBody" class="log-body"></div>
+        <div class="log-foot">
+          <button id="clearLogButton" class="secondary" type="button">CLEAR</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEYS = {
+      registry: 'fleet_registry_url',
+      token: 'fleet_registry_token',
+      target: 'fleet_target',
+      port: 'fleet_port',
+      procs: 'fleet_procs',
+      threads: 'fleet_threads',
+      mc: 'fleet_mc'
+    };
+
+    const els = {
+      registryInput: document.getElementById('registryInput'),
+      tokenInput: document.getElementById('tokenInput'),
+      statusDot: document.getElementById('statusDot'),
+      wakeButton: document.getElementById('wakeButton'),
+      targetInput: document.getElementById('targetInput'),
+      portInput: document.getElementById('portInput'),
+      procsInput: document.getElementById('procsInput'),
+      threadsInput: document.getElementById('threadsInput'),
+      mcInput: document.getElementById('mcInput'),
+      fireButton: document.getElementById('fireButton'),
+      stopButton: document.getElementById('stopButton'),
+      nodeTableBody: document.getElementById('nodeTableBody'),
+      logBody: document.getElementById('logBody'),
+      statusText: document.getElementById('statusText'),
+      clearLogButton: document.getElementById('clearLogButton')
+    };
+
+    const state = {
+      registry: '',
+      token: '',
+      nodes: [],
+      registryStatus: 'amber',
+      fireInFlight: false,
+      stopInFlight: false,
+      wakeCountdown: 0,
+      fireTimer: null,
+      registryTimer: null,
+      logs: []
+    };
+
+    function log(msg, type = 'dim') {
+      const stamp = new Date().toLocaleTimeString([], { hour12: false });
+      const entry = { stamp, msg, type };
+      state.logs.push(entry);
+      if (state.logs.length > 200) state.logs.shift();
+      renderLog();
+    }
+
+    function renderLog() {
+      els.logBody.innerHTML = '';
+      state.logs.forEach((entry) => {
+        const row = document.createElement('div');
+        row.className = 'log-item ' + entry.type;
+        row.textContent = `[${entry.stamp}] ${entry.msg}`;
+        els.logBody.appendChild(row);
+      });
+      els.logBody.scrollTop = els.logBody.scrollHeight;
+    }
+
+    function setStatusDot(color) {
+      state.registryStatus = color;
+      els.statusDot.className = 'dot ' + color;
+      if (color === 'green') {
+        els.statusText.textContent = 'ONLINE';
+        els.wakeButton.hidden = true;
+      } else if (color === 'red') {
+        els.statusText.textContent = 'OFFLINE';
+        els.wakeButton.hidden = false;
+      } else {
+        els.statusText.textContent = 'POLLING';
+        els.wakeButton.hidden = true;
+      }
+    }
+
+    function intValue(el, fallback) {
+      const value = Number(el.value);
+      return Number.isFinite(value) ? value : fallback;
+    }
+
+    function parseTarget(raw) {
+      const text = String(raw || '').trim();
+      if (!text) return { host: '', port: 80, mc: false };
+      let value = text;
+      let mc = false;
+      const found = value.match(/^(https?:\/\/)?([^\s/]+)(\/.*)?$/i);
+      if (found) {
+        value = found[2];
+      }
+      const normalized = value.replace(/\/$/, '');
+      let host = normalized;
+      let port = 80;
+      let scheme = 'http';
+
+      if (/^https?:\/\//i.test(raw || '')) {
+        const u = new URL(raw);
+        host = u.hostname;
+        port = Number(u.port || (u.protocol === 'https:' ? 443 : 80));
+        scheme = u.protocol.replace(':', '');
+      } else {
+        if (normalized.includes(':')) {
+          const lastColon = normalized.lastIndexOf(':');
+          const maybePort = normalized.slice(lastColon + 1);
+          if (/^\d+$/.test(maybePort)) {
+            host = normalized.slice(0, lastColon);
+            port = Number(maybePort);
+          }
+        }
+        if (host && host.includes('minecraft')) {
+          mc = true;
+        }
+      }
+
+      if (host && host.endsWith(':25565')) {
+        mc = true;
+      }
+
+      if (port === 25565) mc = true;
+      if (raw && /:25565/.test(raw)) mc = true;
+      if (host && !host.includes(':')) {
+        if (scheme === 'https') port = 443;
+      }
+      if (!host) port = 80;
+      return { host, port, mc };
+    }
+
+    function formatElapsed(seconds) {
+      const total = Math.max(0, Math.floor(seconds));
+      const min = String(Math.floor(total / 60)).padStart(2, '0');
+      const sec = String(total % 60).padStart(2, '0');
+      return `${min}:${sec}`;
+    }
+
+    function updateFireButton(labelOverride) {
+      const button = els.fireButton;
+      if (labelOverride) {
+        button.textContent = labelOverride;
+      } else if (state.fireInFlight) {
+        const elapsed = Math.max(0, (Date.now() - state.fireStartedAt) / 1000);
+        button.textContent = 'FIRE  ' + formatElapsed(elapsed);
+      } else {
+        button.textContent = 'FIRE';
+      }
+      button.disabled = state.fireInFlight || state.stopInFlight;
+    }
+
+    function updateStopButton() {
+      els.stopButton.disabled = state.stopInFlight || state.fireInFlight;
+    }
+
+    function applyRegistryDefaults() {
+      const params = new URLSearchParams(window.location.search);
+      const fromQuery = params.get('r');
+      const saved = localStorage.getItem(STORAGE_KEYS.registry);
+      const initial = fromQuery || saved || (location.protocol.startsWith('http') ? location.origin : '');
+      state.registry = String(initial || '').replace(/\/$/, '');
+      els.registryInput.value = state.registry;
+      const tokenFromQuery = params.get('k');
+      state.token = tokenFromQuery || localStorage.getItem(STORAGE_KEYS.token) || '';
+      els.tokenInput.value = state.token;
+
+      const targetSaved = localStorage.getItem(STORAGE_KEYS.target) || '';
+      const targetValue = targetSaved || ''; 
+      els.targetInput.value = targetValue;
+      const portSaved = localStorage.getItem(STORAGE_KEYS.port);
+      els.portInput.value = portSaved || '80';
+      const procsSaved = localStorage.getItem(STORAGE_KEYS.procs);
+      els.procsInput.value = procsSaved || '2';
+      const threadsSaved = localStorage.getItem(STORAGE_KEYS.threads);
+      els.threadsInput.value = threadsSaved || '32';
+      const mcSaved = localStorage.getItem(STORAGE_KEYS.mc) === 'true';
+      els.mcInput.checked = mcSaved;
+    }
+
+    function saveSettings() {
+      state.registry = els.registryInput.value.trim().replace(/\/$/, '');
+      state.token = els.tokenInput.value;
+      localStorage.setItem(STORAGE_KEYS.registry, state.registry);
+      localStorage.setItem(STORAGE_KEYS.token, state.token);
+      localStorage.setItem(STORAGE_KEYS.target, els.targetInput.value.trim());
+      localStorage.setItem(STORAGE_KEYS.port, els.portInput.value);
+      localStorage.setItem(STORAGE_KEYS.procs, els.procsInput.value);
+      localStorage.setItem(STORAGE_KEYS.threads, els.threadsInput.value);
+      localStorage.setItem(STORAGE_KEYS.mc, String(els.mcInput.checked));
+    }
+
+    function appendQuery(url, token) {
+      try {
+        const u = new URL(url, window.location.href);
+        if (token) u.searchParams.set('k', token);
+        return u.toString();
+      } catch {
+        const sep = url.includes('?') ? '&' : '?';
+        return token ? `${url}${sep}k=${encodeURIComponent(token)}` : url;
+      }
+    }
+
+    async function fetchJson(url, { timeout = 15000, isFleet = false } = {}) {
+      const targetUrl = appendQuery(url, state.token);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeout); 
+      try {
+        const res = await fetch(targetUrl, {
+          method: 'GET',
+          signal: controller.signal,
+          headers: { Accept: 'application/json' }
+        });
+        if (res.status === 401) {
+          throw new Error('bad token');
+        }
+        if (!res.ok) {
+          throw new Error(`${res.status} ${res.statusText}`);
+        }
+        return await res.json();
+      } catch (err) {
+        if (String(err).includes('bad token')) {
+          throw new Error('bad token');
+        }
+        throw err;
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    async function checkRegistry() {
+      if (!state.registry) {
+        setStatusDot('red');
+        return;
+      }
+      setStatusDot('amber');
+      try {
+        const payload = await fetchJson(`${state.registry}/nodes`, { timeout: 15000 });
+        state.nodes = Array.isArray(payload) ? payload : [];
+        setStatusDot('green');
+        log('registry ok', 'success');
+      } catch (err) {
+        setStatusDot('red');
+        log(`registry failed: ${err.message || 'offline'}`, 'error');
+      }
+    }
+
+    async function fetchNodeStatus(node) {
+      try {
+        const detail = await fetchJson(`${node.url}/`, { timeout: 15000 });
+        const online = true;
+        const rawRunning = detail && typeof detail.running === 'boolean' ? detail.running : false;
+        return {
+          node: node.node,
+          url: node.url,
+          seen: node.seen,
+          online,
+          running: rawRunning,
+          target: detail && detail.target ? detail.target : '—',
+          uptime: detail && typeof detail.uptime_s === 'number' ? `${detail.uptime_s.toFixed(1)}s` : '—',
+          procs: detail && typeof detail.procs === 'number' ? detail.procs : '—'
+        };
+      } catch {
+        return {
+          node: node.node,
+          url: node.url,
+          seen: node.seen,
+          online: false,
+          running: false,
+          target: '—',
+          uptime: '—',
+          procs: '—'
+        };
+      }
+    }
+
+    async function pollNodes() {
+      if (!state.registry) return;
+      try {
+        const payload = await fetchJson(`${state.registry}/nodes`, { timeout: 15000 });
+        const registryNodes = Array.isArray(payload) ? payload : [];
+        const resolved = await Promise.all(registryNodes.map(fetchNodeStatus));
+        resolved.sort((a, b) => Number(b.online) - Number(a.online) || String(a.node).localeCompare(String(b.node)));
+        state.nodes = resolved;
+        renderNodeTable();
+      } catch (err) {
+        log(`node poll failed: ${err.message || 'offline'}`, 'error');
+        setStatusDot('red');
+      }
+    }
+
+    function renderNodeTable() {
+      els.nodeTableBody.innerHTML = '';
+      if (!state.nodes.length) {
+        const row = document.createElement('tr');
+        row.innerHTML = '<td colspan="6" class="subtle">No nodes registered</td>';
+        els.nodeTableBody.appendChild(row);
+        return;
+      }
+      state.nodes.forEach((node) => {
+        const row = document.createElement('tr');
+        const statusClass = node.online ? (node.running ? 'green' : 'amber') : 'red';
+        const runningStatus = node.online ? (node.running ? 'true' : 'false') : 'offline';
+        const runningClass = node.online ? (node.running ? 'status-online' : 'status-stopped') : 'status-offline';
+        row.innerHTML = `
+          <td>${node.node || '—'}</td>
+          <td><span class="status-line"><span class="badge ${statusClass}"></span>${node.online ? (node.running ? 'running' : 'idle') : 'offline'}</span></td>
+          <td class="${runningClass}">${runningStatus}</td>
+          <td>${node.target || '—'}</td>
+          <td>${node.uptime || '—'}</td>
+          <td>${node.procs || '—'}</td>
+        `;
+        els.nodeTableBody.appendChild(row);
+      });
+    }
+
+    function getFleetUrl() {
+      const parsed = parseTarget(els.targetInput.value);
+      let host = parsed.host || '127.0.0.1';
+      let port = intValue(els.portInput, parsed.port || 80);
+      if (!els.portInput.value.trim()) port = parsed.port || 80;
+      if (!host) host = '127.0.0.1';
+      const procs = intValue(els.procsInput, 2);
+      const threads = intValue(els.threadsInput, 32);
+      const mc = els.mcInput.checked || parsed.mc;
+      const url = `${state.registry}/fleet?host=${encodeURIComponent(host)}&port=${port}&procs=${procs}&threads=${threads}${mc ? '&mc=1' : ''}`;
+      return { url, host, port, procs, threads, mc, parsed };
+    }
+
+    async function fireFleet() {
+      if (!state.registry || state.fireInFlight || state.stopInFlight) return;
+      const config = getFleetUrl();
+      if (!config.host) {
+        log('target host required', 'error');
+        return;
+      }
+      state.fireInFlight = true;
+      state.fireStartedAt = Date.now();
+      state.stopInFlight = false;
+      updateFireButton();
+      updateStopButton();
+      log(`fire -> ${config.host}:${config.port} procs=${config.procs} threads=${config.threads} mc=${config.mc ? 1 : 0}`, 'warn');
+      try {
+        const result = await fetchJson(config.url, { timeout: 45000, isFleet: true });
+        log(`fleet: ${JSON.stringify(result)}`, 'success');
+        if (result && typeof result.fired === 'number' && result.fired === 0) {
+          log('cold start - nodes waking, fire again in 90s', 'warn');
+        }
+      } catch (err) {
+        const msg = err.message === 'bad token' ? 'bad token' : (err.message || 'fire failed');
+        log(`fire failed: ${msg}`, 'error');
+      } finally {
+        state.fireInFlight = false;
+        updateFireButton();
+        updateStopButton();
+      }
+    }
+
+    async function stopFleet() {
+      if (!state.registry || state.stopInFlight || state.fireInFlight) return;
+      state.stopInFlight = true;
+      updateStopButton();
+      log('stop -> registry', 'warn');
+      try {
+        const result = await fetchJson(`${state.registry}/stop`, { timeout: 15000 });
+        log(`stop: ${JSON.stringify(result)}`, 'success');
+      } catch (err) {
+        log(`stop failed: ${err.message || 'stop failed'}`, 'error');
+      } finally {
+        state.stopInFlight = false;
+        updateStopButton();
+      }
+    }
+
+    function scheduleRegistryPoll() {
+      clearInterval(state.registryTimer);
+      state.registryTimer = setInterval(() => {
+        if (!state.fireInFlight && !state.stopInFlight) {
+          checkRegistry();
+          pollNodes();
+        }
+      }, 5000);
+    }
+
+    function bindInputs() {
+      els.registryInput.addEventListener('change', () => {
+        saveSettings();
+        checkRegistry();
+        pollNodes();
+      });
+      els.tokenInput.addEventListener('input', () => {
+        saveSettings();
+      });
+      els.targetInput.addEventListener('change', saveSettings);
+      els.portInput.addEventListener('change', saveSettings);
+      els.procsInput.addEventListener('change', saveSettings);
+      els.threadsInput.addEventListener('change', saveSettings);
+      els.mcInput.addEventListener('change', saveSettings);
+      els.fireButton.addEventListener('click', fireFleet);
+      els.stopButton.addEventListener('click', stopFleet);
+      els.clearLogButton.addEventListener('click', () => {
+        state.logs = [];
+        renderLog();
+      });
+
+      els.targetInput.addEventListener('input', () => {
+        const parsed = parseTarget(els.targetInput.value);
+        els.portInput.value = parsed.port || els.portInput.value;
+        els.mcInput.checked = parsed.mc || els.mcInput.checked;
+        saveSettings();
+      });
+
+      els.wakeButton.addEventListener('click', async () => {
+        if (!state.registry) return;
+        setStatusDot('amber');
+        log('wake -> registry', 'warn');
+        try {
+          const start = Date.now();
+          const payload = await fetchJson(`${state.registry}/`, { timeout: 20000 });
+          const elapsed = Math.round((Date.now() - start) / 1000);
+          log(`wake success in ${elapsed}s: ${JSON.stringify(payload)}`, 'success');
+          setStatusDot('green');
+        } catch (err) {
+          log(`wake failed: ${err.message || 'cold start'}`, 'error');
+          state.wakeCountdown = 90;
+          const tick = () => {
+            if (state.wakeCountdown <= 0) {
+              clearInterval(window.wakeTimer);
+              log('cold start - nodes waking, fire again in 90s', 'warn');
+              return;
+            }
+            state.wakeCountdown -= 1;
+            els.wakeButton.textContent = `WAKE ${state.wakeCountdown}s`;
+          };
+          clearInterval(window.wakeTimer);
+          window.wakeTimer = setInterval(tick, 1000);
+          tick();
+        }
+      });
+    }
+
+    function startup() {
+      applyRegistryDefaults();
+      bindInputs();
+      renderNodeTable();
+      log('dashboard ready', 'dim');
+      setStatusDot('amber');
+      checkRegistry();
+      pollNodes();
+      scheduleRegistryPoll();
+    }
+
+    startup();
+  </script>
+</body>
+</html>

